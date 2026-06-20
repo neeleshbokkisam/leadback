@@ -8,6 +8,7 @@ import discord
 from dotenv import load_dotenv
 
 from bot.nlp import categorize
+from bot.integrations import forward_feedback
 from store.redis_client import save_feedback
 
 load_dotenv()
@@ -34,6 +35,7 @@ async def on_message(message):
 
     item = categorize(message.content, str(message.author))
     save_feedback(item)
+    forward_feedback(item)
     await message.add_reaction("✓")
 
 
