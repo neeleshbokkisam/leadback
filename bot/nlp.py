@@ -11,15 +11,14 @@ QUESTION_STARTS = {"how", "what", "why", "when", "where", "can", "is", "do"}
 
 def categorize(text, author):
     lowered = text.lower()
-    words = set(lowered.split())
     first = lowered.split()[0] if lowered.split() else ""
 
     category = "other"
-    if words & BUG_WORDS or "doesn't work" in lowered or "not working" in lowered:
+    if any(w in lowered for w in BUG_WORDS) or "doesn't work" in lowered or "not working" in lowered:
         category = "bug"
-    elif words & FEATURE_WORDS:
+    elif any(w in lowered for w in FEATURE_WORDS):
         category = "feature"
-    elif words & PRAISE_WORDS:
+    elif any(w in lowered for w in PRAISE_WORDS):
         category = "praise"
     elif text.strip().endswith("?") or first in QUESTION_STARTS:
         category = "question"
