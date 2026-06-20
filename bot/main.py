@@ -37,17 +37,15 @@ async def on_message(message):
     if message.channel.id != CHANNEL_ID:
         return
 
+    item = categorize(message.content, str(message.author))
+    save_feedback(item)
+    forward_feedback(item)
+    log.info("saved %s from %s", item["category"], item["author"])
+
     try:
-        item = categorize(message.content, str(message.author))
-        save_feedback(item)
-        forward_feedback(item)
-        log.info("saved %s from %s", item["category"], item["author"])
-        try:
-            await message.add_reaction("✓")
-        except discord.Forbidden:
-            await message.reply(item["category"], mention_author=False)
-    except Exception:
-        log.exception("failed on message %s", message.id)
+        await message.add_reaction("\N{WHITE HEAVY CHECK MARK}")
+    except (discord.Forbidden, discord.HTTPException):
+        await message.reply(item["category"], mention_author=False)
 
 
 if __name__ == "__main__":
