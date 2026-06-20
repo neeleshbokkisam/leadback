@@ -7,6 +7,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import discord
 from dotenv import load_dotenv
 
+from bot.nlp import categorize
+from store.redis_client import save_feedback
+
 load_dotenv()
 
 intents = discord.Intents.default()
@@ -28,6 +31,10 @@ async def on_message(message):
         return
     if message.channel.id != CHANNEL_ID:
         return
+
+    item = categorize(message.content, str(message.author))
+    save_feedback(item)
+    await message.add_reaction("✓")
 
 
 if __name__ == "__main__":
