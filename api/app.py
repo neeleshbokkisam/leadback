@@ -3,18 +3,25 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from dotenv import load_dotenv
 from flask import Flask, jsonify
 from store.redis_client import get_recent, get_stats
+
+load_dotenv()
 
 app = Flask(__name__)
 
 COLORS = {
-    "bug": "#c44",
-    "feature": "#48a",
-    "praise": "#4a8",
-    "question": "#a84",
-    "other": "#888",
+    "bug": "#cc4444",
+    "feature": "#4488aa",
+    "praise": "#44aa88",
+    "question": "#aa8844",
+    "other": "#888888",
 }
+
+
+def tint(color):
+    return f"{color}22"
 
 
 @app.route("/api/feedback")
@@ -35,15 +42,15 @@ def dashboard():
 
     chips = ""
     for cat, count in s.items():
-        color = COLORS.get(cat, "#888")
-        chips += f'<span class="chip" style="background:{color}18;color:{color}">{cat} {count}</span>'
+        color = COLORS.get(cat, "#888888")
+        chips += f'<span class="chip" style="background:{tint(color)};color:{color}">{cat} {count}</span>'
 
     rows = ""
     for item in items:
-        color = COLORS.get(item["category"], "#888")
+        color = COLORS.get(item["category"], "#888888")
         time = item["created_at"][:16].replace("T", " ")
         rows += f"""<div class="row">
-            <span class="tag" style="background:{color}18;color:{color}">{item['category']}</span>
+            <span class="tag" style="background:{tint(color)};color:{color}">{item['category']}</span>
             <div class="body">
                 <p>{item['text']}</p>
                 <small>{item['author']} · {time}</small>

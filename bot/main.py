@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -13,6 +14,9 @@ from store.redis_client import save_feedback
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+log = logging.getLogger("leadback")
+
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -23,7 +27,7 @@ CHANNEL_ID = int(os.getenv("FEEDBACK_CHANNEL_ID", 0))
 
 @client.event
 async def on_ready():
-    print(f"connected as {client.user}")
+    log.info("connected as %s, watching channel %s", client.user, CHANNEL_ID)
 
 
 @client.event
@@ -33,10 +37,17 @@ async def on_message(message):
     if message.channel.id != CHANNEL_ID:
         return
 
-    item = categorize(message.content, str(message.author))
-    save_feedback(item)
-    forward_feedback(item)
-    await message.add_reaction("✓")
+    try:
+        item = categorize(message.content, str(message.author))
+        save_feedback(item)
+        forward_feedback(item)
+        log.info("saved %s from %s", item["category"], item["author"])
+        try:
+            await message.add_reaction("✓")
+        except discord.Forbidden:
+            await message.reply(item["category"], mention_author=False)
+    except Exception:
+        log.exception("failed on message %s", message.id)
 
 
 if __name__ == "__main__":
