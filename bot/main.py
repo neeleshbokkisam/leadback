@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import discord
 from dotenv import load_dotenv
 
+from bot.classify import llm_classify
 from bot.nlp import classify_rules
 from bot.integrations import forward_feedback
 from bot.stt import MAX_AUDIO_BYTES, STTError, get_stt, is_audio_filename
@@ -31,6 +32,26 @@ DISCORD_PREVIEW = 1800
 @client.event
 async def on_ready():
     log.info("connected as %s, watching channel %s", client.user, CHANNEL_ID)
+
+
+def _timeout():
+    return float(os.getenv("CLASSIFIER_TIMEOUT", "20"))
+
+
+async def classify_text(text, context_messages=None):
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(llm_classify, text, context_messages),
+            timeout=_timeout(),
+        )
+    except asyncio.TimeoutError:
+        log.info("llm classify timeout")
+        return {
+            "label": classify_rules(text),
+            "confidence": 0.5,
+            "rationale": "rules",
+            "classifier": "rules",
+        }
 
 
 async def _reply(message, text):
@@ -76,26 +97,26 @@ async def on_message(message):
         await _handle_audio(message, audio_atts)
         return
 
-    label = classify_rules(message.content)
+    result = await classify_text(message.content)
     item = build_record(
         text=message.content,
         author=str(message.author),
         source="discord_text",
-        label=label,
-        confidence=0.5,
-        classifier="rules",
+        label=result["label"],
+        confidence=result["confidence"],
+        classifier=result["classifier"],
         channel_id=str(message.channel.id),
         message_id=str(message.id),
         jump_url=message.jump_url,
     )
     save_feedback(item)
     await forward_feedback(item)
-    log.info("saved %s from %s", label, item["author"])
+    log.info("saved %s from %s", item["label"], item["author"])
 
     try:
         await message.add_reaction("\N{WHITE HEAVY CHECK MARK}")
     except (discord.Forbidden, discord.HTTPException):
-        await message.reply(label, mention_author=False)
+        await message.reply(item["label"], mention_author=False)
 
 
 if __name__ == "__main__":
