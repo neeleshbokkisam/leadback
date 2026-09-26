@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -9,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import discord
 from dotenv import load_dotenv
 
-from bot.nlp import categorize
+from bot.nlp import classify_rules
 from bot.integrations import forward_feedback
 from bot.stt import MAX_AUDIO_BYTES, STTError, get_stt, is_audio_filename
 from store.redis_client import save_feedback
@@ -76,15 +77,21 @@ async def on_message(message):
         await _handle_audio(message, audio_atts)
         return
 
-    item = categorize(message.content, str(message.author))
+    label = classify_rules(message.content)
+    item = {
+        "text": message.content,
+        "author": str(message.author),
+        "category": label,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
     save_feedback(item)
-    forward_feedback(item)
-    log.info("saved %s from %s", item["category"], item["author"])
+    await forward_feedback(item)
+    log.info("saved %s from %s", label, item["author"])
 
     try:
         await message.add_reaction("\N{WHITE HEAVY CHECK MARK}")
     except (discord.Forbidden, discord.HTTPException):
-        await message.reply(item["category"], mention_author=False)
+        await message.reply(label, mention_author=False)
 
 
 if __name__ == "__main__":

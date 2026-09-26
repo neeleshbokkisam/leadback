@@ -1,3 +1,4 @@
+import html
 import sys
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from flask import Flask, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from bot.stt import MAX_AUDIO_BYTES, STTError, get_stt, is_audio_filename
-from store.redis_client import get_recent, get_stats
+from store.redis_client import get_processed, get_recent, get_stats
 
 load_dotenv()
 
@@ -67,22 +68,25 @@ def ingest_audio():
 def dashboard():
     s = get_stats()
     items = get_recent(30)
-    total = sum(s.values())
+    total = get_processed()
 
     chips = ""
     for cat, count in s.items():
         color = COLORS.get(cat, "#888888")
-        chips += f'<span class="chip" style="background:{tint(color)};color:{color}">{cat} {count}</span>'
+        chips += f'<span class="chip" style="background:{tint(color)};color:{color}">{html.escape(cat)} {count}</span>'
 
     rows = ""
     for item in items:
-        color = COLORS.get(item["category"], "#888888")
-        time = item["created_at"][:16].replace("T", " ")
+        label = item.get("label") or item.get("category") or "other"
+        color = COLORS.get(label, "#888888")
+        time = html.escape(item["created_at"][:16].replace("T", " "))
+        text = html.escape(item.get("text") or "")
+        author = html.escape(item.get("author") or "")
         rows += f"""<div class="row">
-            <span class="tag" style="background:{tint(color)};color:{color}">{item['category']}</span>
+            <span class="tag" style="background:{tint(color)};color:{color}">{html.escape(label)}</span>
             <div class="body">
-                <p>{item['text']}</p>
-                <small>{item['author']} · {time}</small>
+                <p>{text}</p>
+                <small>{author} · {time}</small>
             </div>
         </div>"""
 
@@ -111,7 +115,7 @@ main {{ max-width: 720px; margin: 0 auto; padding: 0 24px 48px; }}
 <body>
 <header>
     <h1>leadback</h1>
-    <p class="sub">{total} feedback items</p>
+    <p class="sub">{total} messages processed</p>
     <div class="stats">{chips}</div>
 </header>
 <main>
