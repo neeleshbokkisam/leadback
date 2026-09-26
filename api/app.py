@@ -1,3 +1,4 @@
+import asyncio
 import html
 import sys
 from pathlib import Path
@@ -8,8 +9,10 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from bot.stt import MAX_AUDIO_BYTES, STTError, get_stt, is_audio_filename
-from store.redis_client import get_processed, get_recent, get_stats
+from bot.classify import llm_classify
+from bot.integrations import forward_feedback
+from bot.stt import MAX_AUDIO_BYTES, STTError, first_speaker_id, get_stt, is_audio_filename
+from store.redis_client import build_record, get_processed, get_recent, get_stats, save_feedback
 
 load_dotenv()
 
@@ -51,7 +54,7 @@ def ingest_audio():
     f = request.files["file"]
     filename = f.filename or ""
     if not is_audio_filename(filename):
-        return jsonify({"error": "unsupported type, use wav/mp3/m4a"}), 400
+        return jsonify({"error": "unsupported type, use wav/mp3/m4a/ogg"}), 400
     audio = f.read()
     if not audio:
         return jsonify({"error": "empty file"}), 400
@@ -61,7 +64,24 @@ def ingest_audio():
         transcript = get_stt().transcribe(audio, filename)
     except STTError as e:
         return jsonify({"error": str(e)}), 502
-    return jsonify(transcript.to_dict())
+    text = (transcript.text or "").strip()
+    if not text:
+        return jsonify({"error": "empty transcript"}), 502
+    result = llm_classify(text)
+    author = (request.form.get("author") or "api").strip() or "api"
+    item = build_record(
+        text=text,
+        author=author,
+        source="api_audio",
+        label=result["label"],
+        confidence=result["confidence"],
+        classifier=result["classifier"],
+        speaker_id=first_speaker_id(transcript),
+        transcript_snippet=text[:200],
+    )
+    save_feedback(item)
+    asyncio.run(forward_feedback(item))
+    return jsonify(item)
 
 
 @app.route("/")

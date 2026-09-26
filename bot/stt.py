@@ -10,11 +10,12 @@ import requests
 log = logging.getLogger("leadback.stt")
 
 STT_URL = "https://api.elevenlabs.io/v1/speech-to-text"
-ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a"}
+ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".ogg"}
 CONTENT_TYPES = {
     ".wav": "audio/wav",
     ".mp3": "audio/mpeg",
     ".m4a": "audio/mp4",
+    ".ogg": "audio/ogg",
 }
 MAX_AUDIO_BYTES = 50 * 1024 * 1024
 DEFAULT_TIMEOUT = 120
@@ -97,7 +98,7 @@ class ElevenLabsScribe:
         if not self.api_key:
             raise STTError("ELEVENLABS_API_KEY is not set")
         if not is_audio_filename(filename):
-            raise STTError("unsupported type, use wav/mp3/m4a")
+            raise STTError("unsupported type, use wav/mp3/m4a/ogg")
         if not audio:
             raise STTError("empty file")
         if len(audio) > MAX_AUDIO_BYTES:
@@ -160,6 +161,13 @@ class ElevenLabsScribe:
 
         log.info("stt.fail after %s attempts: %s", MAX_ATTEMPTS, last_error)
         raise last_error or STTError("stt failed")
+
+
+def first_speaker_id(transcript):
+    for word in transcript.words or []:
+        if word.speaker_id:
+            return word.speaker_id
+    return None
 
 
 def get_stt() -> SpeechToText:

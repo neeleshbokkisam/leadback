@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from bot.classify import llm_classify
 from bot.nlp import classify_rules
 from bot.integrations import forward_feedback
-from bot.stt import MAX_AUDIO_BYTES, STTError, get_stt, is_audio_filename
+from bot.stt import MAX_AUDIO_BYTES, STTError, first_speaker_id, get_stt, is_audio_filename
 from store.redis_client import build_record, save_feedback
 
 load_dotenv()
@@ -215,6 +215,7 @@ async def _reply(message, text):
 
 async def _handle_audio(message, attachments):
     stt = get_stt()
+    saved = None
     for att in attachments:
         if att.size and att.size > MAX_AUDIO_BYTES:
             await _reply(message, "file too large: %s" % att.filename)
@@ -231,10 +232,26 @@ async def _handle_audio(message, attachments):
             await _reply(message, "could not download %s" % att.filename)
             continue
 
-        text = (transcript.text or "").strip() or "(empty transcript)"
-        if len(text) > DISCORD_PREVIEW:
-            text = text[:DISCORD_PREVIEW] + "…"
-        await _reply(message, "transcript (%s):\n%s" % (att.filename, text))
+        text = (transcript.text or "").strip()
+        if not text:
+            await _reply(message, "transcript (%s): (empty transcript)" % att.filename)
+            continue
+        item = await triage(
+            text,
+            message,
+            "discord_voice",
+            speaker_id=first_speaker_id(transcript),
+            transcript_snippet=text[:200],
+        )
+        saved = item
+        preview = text if len(text) <= DISCORD_PREVIEW else text[:DISCORD_PREVIEW] + "…"
+        await _reply(message, "transcript (%s):\n%s\nlabel: %s" % (att.filename, preview, item["label"]))
+
+    written = (message.content or "").strip()
+    if written:
+        saved = await triage(written, message, "discord_text")
+    if saved:
+        await mark_saved(message, saved["label"])
 
 
 async def mark_saved(message, label):
