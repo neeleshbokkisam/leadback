@@ -53,9 +53,9 @@ def _to_slack(item):
 async def forward_feedback(item):
     try:
         await asyncio.to_thread(_to_notion, item)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  a failed forward must not skip the other destination
         log.info("notion forward failed: %s", e)
     try:
         await asyncio.to_thread(_to_slack, item)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log.info("slack forward failed: %s", e)

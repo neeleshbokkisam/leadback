@@ -109,7 +109,7 @@ In the Discord developer portal, turn on the Message Content intent. The bot nee
 | CONTEXT_THRESHOLD | no, default 0.7 |
 | ELEVENLABS_API_KEY | voice only |
 | ELEVENLABS_TIMEOUT | no |
-| STT_PROVIDER | no, default elevenlabs |
+| STT_PROVIDER | no |
 | NOTION_TOKEN | no |
 | NOTION_DATABASE_ID | no |
 | SLACK_WEBHOOK_URL | no |

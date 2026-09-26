@@ -27,8 +27,7 @@ def main():
     print("| --- | --- | --- | --- |")
     for row in rows:
         print(
-            "| %s | %s | %s | %s |"
-            % (
+            "| {} | {} | {} | {} |".format(
                 cell(row.get("text", "")),
                 cell(row.get("context", "")),
                 cell(row.get("label_isolated", "")),

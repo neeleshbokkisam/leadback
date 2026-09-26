@@ -11,7 +11,13 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from bot.classify import llm_classify
 from bot.integrations import forward_feedback
-from bot.stt import MAX_AUDIO_BYTES, STTError, first_speaker_id, get_stt, is_audio_filename
+from bot.stt import (
+    MAX_AUDIO_BYTES,
+    STTError,
+    first_speaker_id,
+    get_stt,
+    is_audio_filename,
+)
 from store.redis_client import (
     LABELS,
     build_record,
@@ -104,7 +110,7 @@ def confidence_pct(item):
     value = item.get("confidence")
     if value is None:
         return ""
-    return "%s%%" % round(float(value) * 100)
+    return f"{round(float(value) * 100)}%"
 
 
 @app.route("/")

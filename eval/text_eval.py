@@ -53,7 +53,7 @@ def context_of(row):
 
 def main():
     if not LABELED.is_file():
-        print("missing %s" % LABELED, file=sys.stderr)
+        print(f"missing {LABELED}", file=sys.stderr)
         sys.exit(1)
     rows = load_rows()
     if any(row.get("example") for row in rows):
@@ -85,13 +85,17 @@ def main():
         ("llm", llm_preds),
         ("llm+context", context_preds),
     )
-    header = "| classifier | accuracy | " + " | ".join(f"{label} f1" for label in LABELS) + " |"
+    header = (
+        "| classifier | accuracy | "
+        + " | ".join(f"{label} f1" for label in LABELS)
+        + " |"
+    )
     sep = "| --- | --- | " + " | ".join("---" for _ in LABELS) + " |"
     lines = [header, sep]
     for name, preds in groups:
-        cells = ["%.3f" % accuracy(golds, preds)]
-        cells += ["%.3f" % f1(golds, preds, label) for label in LABELS]
-        lines.append("| %s | %s |" % (name, " | ".join(cells)))
+        cells = [f"{accuracy(golds, preds):.3f}"]
+        cells += [f"{f1(golds, preds, label):.3f}" for label in LABELS]
+        lines.append("| {} | {} |".format(name, " | ".join(cells)))
     OUT.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(OUT.read_text(encoding="utf-8"))
 

@@ -62,18 +62,18 @@ def main():
         if not audio_path.is_file():
             audio_path = ROOT / row["audio_path"]
         if not audio_path.is_file():
-            print("missing clip: %s" % row["audio_path"], file=sys.stderr)
+            print("missing clip: {}".format(row["audio_path"]), file=sys.stderr)
             sys.exit(1)
         try:
             transcript = stt.transcribe(audio_path.read_bytes(), audio_path.name)
         except STTError as e:
-            print("stt failed %s: %s" % (audio_path.name, e), file=sys.stderr)
+            print(f"stt failed {audio_path.name}: {e}", file=sys.stderr)
             sys.exit(1)
         asr = (transcript.text or "").strip()
         true_text = row["true_transcript"]
         gold = row["gold_label"]
         if gold not in LABELS:
-            print("bad gold_label: %s" % gold, file=sys.stderr)
+            print(f"bad gold_label: {gold}", file=sys.stderr)
             sys.exit(1)
         wers.append(word_error_rate(true_text, asr))
         true_label = llm_classify(true_text)["label"]
@@ -91,13 +91,13 @@ def main():
     lines = [
         "| clips | WER | label acc (true transcript) | label acc (ASR transcript) | gap |",
         "| --- | --- | --- | --- | --- |",
-        "| %d | %.3f | %.3f | %.3f | %.3f |" % (n, mean_wer, true_acc, asr_acc, gap),
+        f"| {n} | {mean_wer:.3f} | {true_acc:.3f} | {asr_acc:.3f} | {gap:.3f} |",
         "",
         "label flips",
     ]
     if flips:
         for name, true_label, asr_label in flips:
-            lines.append("- %s: %s -> %s" % (name, true_label, asr_label))
+            lines.append(f"- {name}: {true_label} -> {asr_label}")
     else:
         lines.append("- none")
     OUT.write_text("\n".join(lines) + "\n", encoding="utf-8")

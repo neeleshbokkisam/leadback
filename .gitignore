@@ -4,3 +4,7 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+C[Ll][Aa][Uu][Dd][Ee].md
+AGENTS.md
+.cursorrules
+.cursor/

@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 
 import redis
 
-r = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"), decode_responses=True)
+r = redis.from_url(
+    os.getenv("REDIS_URL", "redis://localhost:6379"), decode_responses=True
+)
 
 LABELS = ["bug", "feature", "praise", "question", "other"]
 

@@ -15,7 +15,9 @@ def classify_rules(text):
     lowered = text.lower()
     first = lowered.split()[0] if lowered.split() else ""
 
-    if any(_has_term(lowered, w) for w in BUG_WORDS) or any(_has_term(lowered, p) for p in BUG_PHRASES):
+    if any(_has_term(lowered, w) for w in BUG_WORDS) or any(
+        _has_term(lowered, p) for p in BUG_PHRASES
+    ):
         return "bug"
     if any(_has_term(lowered, w) for w in FEATURE_WORDS):
         return "feature"

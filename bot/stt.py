@@ -1,9 +1,9 @@
 import logging
 import os
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Protocol
 
 import requests
 
@@ -31,9 +31,9 @@ class STTError(Exception):
 @dataclass
 class TranscriptWord:
     text: str
-    start: Optional[float]
-    end: Optional[float]
-    speaker_id: Optional[str]
+    start: float | None
+    end: float | None
+    speaker_id: str | None
     type: str
 
 
@@ -41,17 +41,13 @@ class TranscriptWord:
 class Transcript:
     text: str
     words: list
-    language_code: Optional[str]
-    duration_secs: Optional[float]
+    language_code: str | None
+    duration_secs: float | None
     provider: str
-
-    def to_dict(self):
-        return asdict(self)
 
 
 class SpeechToText(Protocol):
-    def transcribe(self, audio: bytes, filename: str) -> Transcript:
-        ...
+    def transcribe(self, audio: bytes, filename: str) -> Transcript: ...
 
 
 def is_audio_filename(filename):
@@ -91,8 +87,14 @@ def _from_elevenlabs(payload):
 
 class ElevenLabsScribe:
     def __init__(self, api_key=None, timeout=None):
-        self.api_key = api_key if api_key is not None else os.getenv("ELEVENLABS_API_KEY", "")
-        self.timeout = timeout if timeout is not None else int(os.getenv("ELEVENLABS_TIMEOUT", DEFAULT_TIMEOUT))
+        self.api_key = (
+            api_key if api_key is not None else os.getenv("ELEVENLABS_API_KEY", "")
+        )
+        self.timeout = (
+            timeout
+            if timeout is not None
+            else int(os.getenv("ELEVENLABS_TIMEOUT", DEFAULT_TIMEOUT))
+        )
 
     def transcribe(self, audio: bytes, filename: str) -> Transcript:
         if not self.api_key:
@@ -122,28 +124,30 @@ class ElevenLabsScribe:
                     timeout=self.timeout,
                 )
             except requests.Timeout:
-                last_error = STTError("stt timeout after %ss" % self.timeout)
+                last_error = STTError(f"stt timeout after {self.timeout}s")
                 log.info("stt.retry attempt=%s reason=timeout", attempt)
                 if attempt < MAX_ATTEMPTS:
                     _backoff(attempt)
                 continue
             except requests.RequestException as e:
-                last_error = STTError("stt request failed: %s" % e)
+                last_error = STTError(f"stt request failed: {e}")
                 log.info("stt.retry attempt=%s reason=%s", attempt, e)
                 if attempt < MAX_ATTEMPTS:
                     _backoff(attempt)
                 continue
 
             if resp.status_code in RETRY_STATUS:
-                last_error = STTError("stt http %s: %s" % (resp.status_code, resp.text[:200]))
+                last_error = STTError(f"stt http {resp.status_code}: {resp.text[:200]}")
                 log.info("stt.retry attempt=%s status=%s", attempt, resp.status_code)
                 if attempt < MAX_ATTEMPTS:
                     _backoff(attempt)
                 continue
 
             if resp.status_code >= 400:
-                log.info("stt.fail status=%s body=%s", resp.status_code, resp.text[:200])
-                raise STTError("stt http %s: %s" % (resp.status_code, resp.text[:200]))
+                log.info(
+                    "stt.fail status=%s body=%s", resp.status_code, resp.text[:200]
+                )
+                raise STTError(f"stt http {resp.status_code}: {resp.text[:200]}")
 
             try:
                 payload = resp.json()
@@ -174,4 +178,4 @@ def get_stt() -> SpeechToText:
     provider = os.getenv("STT_PROVIDER", "elevenlabs")
     if provider == "elevenlabs":
         return ElevenLabsScribe()
-    raise STTError("unknown STT provider: %s" % provider)
+    raise STTError(f"unknown STT provider: {provider}")

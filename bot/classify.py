@@ -71,12 +71,15 @@ def llm_classify(text, context_messages=None):
             tool_choice={"type": "tool", "name": "label_feedback"},
             messages=[{"role": "user", "content": prompt}],
         )
-    except Exception:
+    except Exception:  # noqa: BLE001  provider errors fall back to rules
         return rules_result(text)
 
     data = None
     for block in resp.content:
-        if getattr(block, "type", None) == "tool_use" and block.name == "label_feedback":
+        if (
+            getattr(block, "type", None) == "tool_use"
+            and block.name == "label_feedback"
+        ):
             data = block.input
             break
     if not isinstance(data, dict):

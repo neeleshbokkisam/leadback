@@ -1,8 +1,8 @@
 import asyncio
 import json
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -11,9 +11,15 @@ import discord
 from dotenv import load_dotenv
 
 from bot.classify import llm_classify
-from bot.nlp import classify_rules
 from bot.integrations import forward_feedback
-from bot.stt import MAX_AUDIO_BYTES, STTError, first_speaker_id, get_stt, is_audio_filename
+from bot.nlp import classify_rules
+from bot.stt import (
+    MAX_AUDIO_BYTES,
+    STTError,
+    first_speaker_id,
+    get_stt,
+    is_audio_filename,
+)
 from store.redis_client import build_record, save_feedback
 
 load_dotenv()
@@ -26,7 +32,7 @@ intents.message_content = True
 
 client = discord.Client(intents=intents)
 
-CHANNEL_ID = int(os.getenv("FEEDBACK_CHANNEL_ID", 0))
+CHANNEL_ID = int(os.getenv("FEEDBACK_CHANNEL_ID", "0"))
 DISCORD_PREVIEW = 1800
 ACCEPTED_TYPES = {discord.MessageType.default, discord.MessageType.reply}
 RETRY_LOG = Path(__file__).resolve().parent.parent / "eval" / "context_retries.jsonl"
@@ -218,23 +224,23 @@ async def _handle_audio(message, attachments):
     saved = None
     for att in attachments:
         if att.size and att.size > MAX_AUDIO_BYTES:
-            await _reply(message, "file too large: %s" % att.filename)
+            await _reply(message, f"file too large: {att.filename}")
             continue
         try:
             audio = await att.read()
             transcript = await asyncio.to_thread(stt.transcribe, audio, att.filename)
         except STTError as e:
             log.info("stt failed %s: %s", att.filename, e)
-            await _reply(message, "transcription failed: %s" % e)
+            await _reply(message, f"transcription failed: {e}")
             continue
         except (discord.HTTPException, discord.NotFound) as e:
             log.info("stt download failed %s: %s", att.filename, e)
-            await _reply(message, "could not download %s" % att.filename)
+            await _reply(message, f"could not download {att.filename}")
             continue
 
         text = (transcript.text or "").strip()
         if not text:
-            await _reply(message, "transcript (%s): (empty transcript)" % att.filename)
+            await _reply(message, f"transcript ({att.filename}): (empty transcript)")
             continue
         item = await triage(
             text,
@@ -245,7 +251,12 @@ async def _handle_audio(message, attachments):
         )
         saved = item
         preview = text if len(text) <= DISCORD_PREVIEW else text[:DISCORD_PREVIEW] + "…"
-        await _reply(message, "transcript (%s):\n%s\nlabel: %s" % (att.filename, preview, item["label"]))
+        await _reply(
+            message,
+            "transcript ({}):\n{}\nlabel: {}".format(
+                att.filename, preview, item["label"]
+            ),
+        )
 
     written = (message.content or "").strip()
     if written:

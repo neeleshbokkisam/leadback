@@ -22,8 +22,7 @@ SUMMARY = ROOT / "eval" / "replay_summary.json"
 def load_rows(path):
     if path.suffix.lower() == ".csv":
         with path.open(newline="", encoding="utf-8") as f:
-            for row in csv.DictReader(f):
-                yield row
+            yield from csv.DictReader(f)
         return
     with path.open(encoding="utf-8") as f:
         for line in f:
@@ -54,7 +53,7 @@ def main():
 
     path = args.path.expanduser().resolve()
     if not path.is_file():
-        print("missing file: %s" % path, file=sys.stderr)
+        print(f"missing file: {path}", file=sys.stderr)
         sys.exit(1)
 
     key = str(path)
