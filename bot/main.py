@@ -2,7 +2,6 @@ import asyncio
 import os
 import sys
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -13,7 +12,7 @@ from dotenv import load_dotenv
 from bot.nlp import classify_rules
 from bot.integrations import forward_feedback
 from bot.stt import MAX_AUDIO_BYTES, STTError, get_stt, is_audio_filename
-from store.redis_client import save_feedback
+from store.redis_client import build_record, save_feedback
 
 load_dotenv()
 
@@ -78,12 +77,17 @@ async def on_message(message):
         return
 
     label = classify_rules(message.content)
-    item = {
-        "text": message.content,
-        "author": str(message.author),
-        "category": label,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
+    item = build_record(
+        text=message.content,
+        author=str(message.author),
+        source="discord_text",
+        label=label,
+        confidence=0.5,
+        classifier="rules",
+        channel_id=str(message.channel.id),
+        message_id=str(message.id),
+        jump_url=message.jump_url,
+    )
     save_feedback(item)
     await forward_feedback(item)
     log.info("saved %s from %s", label, item["author"])
