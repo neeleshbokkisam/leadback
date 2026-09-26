@@ -4,12 +4,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
+from werkzeug.exceptions import RequestEntityTooLarge
+
+from bot.stt import MAX_AUDIO_BYTES, STTError, get_stt, is_audio_filename
 from store.redis_client import get_recent, get_stats
 
 load_dotenv()
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = MAX_AUDIO_BYTES
 
 COLORS = {
     "bug": "#cc4444",
@@ -32,6 +36,31 @@ def feedback():
 @app.route("/api/stats")
 def stats():
     return jsonify(get_stats())
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def too_large(_e):
+    return jsonify({"error": "file too large"}), 413
+
+
+@app.route("/api/ingest/audio", methods=["POST"])
+def ingest_audio():
+    if "file" not in request.files:
+        return jsonify({"error": "missing file"}), 400
+    f = request.files["file"]
+    filename = f.filename or ""
+    if not is_audio_filename(filename):
+        return jsonify({"error": "unsupported type, use wav/mp3/m4a"}), 400
+    audio = f.read()
+    if not audio:
+        return jsonify({"error": "empty file"}), 400
+    if len(audio) > MAX_AUDIO_BYTES:
+        return jsonify({"error": "file too large"}), 413
+    try:
+        transcript = get_stt().transcribe(audio, filename)
+    except STTError as e:
+        return jsonify({"error": str(e)}), 502
+    return jsonify(transcript.to_dict())
 
 
 @app.route("/")
