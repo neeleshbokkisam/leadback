@@ -1,4 +1,4 @@
-# TODO: replace these example rows with hand-labeled messages, then delete "example": true
+# replace these example rows with hand-labeled messages, then delete "example": true
 {"text": "the login button crashes", "gold_label": "bug", "example": true}
 {"text": "please add dark mode", "gold_label": "feature", "example": true}
 {"text": "love the new dashboard", "gold_label": "praise", "example": true}

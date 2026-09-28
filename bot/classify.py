@@ -1,6 +1,9 @@
+import logging
 import os
 
 from bot.nlp import classify_rules
+
+log = logging.getLogger("leadback")
 
 LABELS = ("bug", "feature", "praise", "question", "other")
 
@@ -66,12 +69,13 @@ def llm_classify(text, context_messages=None):
         resp = client.messages.create(
             model=model,
             max_tokens=256,
-            temperature=0,
             tools=[TOOL],
             tool_choice={"type": "tool", "name": "label_feedback"},
             messages=[{"role": "user", "content": prompt}],
+            extra_body={"temperature": 0},
         )
-    except Exception:  # noqa: BLE001  provider errors fall back to rules
+    except Exception as e:  # noqa: BLE001  provider errors fall back to rules
+        log.info("llm classify failed: %s", e)
         return rules_result(text)
 
     data = None

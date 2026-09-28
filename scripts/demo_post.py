@@ -17,9 +17,9 @@ LINES = [
     ("Dia", "how do I reset my password?"),
     ("Eli", "search returns the wrong project"),
     ("Fran", "thanks, billing is much clearer now"),
-    ("Gus", "desktop checkout works for me"),
+    ("Gus", "app crashes every time I upload a photo on iOS"),
 ]
-THREAD_LINE = ("Hana", "does this work on mobile?")
+THREAD_LINE = ("Hana", "same on my phone")
 PAUSE = 2.5
 
 

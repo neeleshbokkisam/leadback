@@ -13,7 +13,7 @@ def cell(value):
 
 def main():
     if not PATH.is_file():
-        print("TODO: no rows in eval/context_retries.jsonl yet")
+        print("no rows in eval/context_retries.jsonl yet")
         sys.exit(0)
     rows = []
     for line in PATH.read_text(encoding="utf-8").splitlines():
@@ -21,7 +21,7 @@ def main():
         if line:
             rows.append(json.loads(line))
     if not rows:
-        print("TODO: no rows in eval/context_retries.jsonl yet")
+        print("no rows in eval/context_retries.jsonl yet")
         sys.exit(0)
     print("| message | context | label alone | label with context |")
     print("| --- | --- | --- | --- |")
